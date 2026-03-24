@@ -27,16 +27,32 @@ public with sharing class SellerPerformanceController {
       analysis.performanceStatus = getPerformanceStatus(calculatedScore);
 
       // Generate health assessment tooltip
-      metrics.healthAssessmentTooltip = generateHealthAssessmentTooltip(calculatedScore, analysis.performanceStatus, metrics);
+      metrics.healthAssessmentTooltip = generateHealthAssessmentTooltip(
+        calculatedScore,
+        analysis.performanceStatus,
+        metrics
+      );
 
       // Extract first name from user name
       String firstName = extractFirstName(user.Name);
 
       // Build detailed context for AI analysis
-      String contextData = buildContextData(userId, user, metrics, calculatedScore, analysis.performanceStatus, firstName);
+      String contextData = buildContextData(
+        userId,
+        user,
+        metrics,
+        calculatedScore,
+        analysis.performanceStatus,
+        firstName
+      );
 
       // Call Einstein GenAI for insights and actions ONLY
-      String aiResponse = callEinsteinAI(contextData, calculatedScore, analysis.performanceStatus, firstName);
+      String aiResponse = callEinsteinAI(
+        contextData,
+        calculatedScore,
+        analysis.performanceStatus,
+        firstName
+      );
 
       // Parse AI response
       parseAIResponse(aiResponse, analysis);
@@ -99,7 +115,7 @@ public with sharing class SellerPerformanceController {
     Integer overdueTasks = 0;
     Integer highPriorityTasks = 0;
     Decimal totalCallDuration = 0;
-    
+
     // Track task types
     Map<String, Integer> taskTypeCounts = new Map<String, Integer>();
     taskTypeCounts.put('Call', 0);
@@ -110,19 +126,32 @@ public with sharing class SellerPerformanceController {
     for (Task t : tasks) {
       // Track task types
       String taskType = 'Other';
-      if (t.TaskSubtype == 'Call' || (String.isNotBlank(t.Subject) && t.Subject.toLowerCase().contains('call'))) {
+      if (
+        t.TaskSubtype == 'Call' ||
+        (String.isNotBlank(t.Subject) &&
+        t.Subject.toLowerCase().contains('call'))
+      ) {
         taskType = 'Call';
         callCount++;
         if (t.CallDurationInSeconds != null) {
           totalCallDuration += t.CallDurationInSeconds;
         }
-      } else if (t.TaskSubtype == 'Email' || (String.isNotBlank(t.Subject) && t.Subject.toLowerCase().contains('email'))) {
+      } else if (
+        t.TaskSubtype == 'Email' ||
+        (String.isNotBlank(t.Subject) &&
+        t.Subject.toLowerCase().contains('email'))
+      ) {
         taskType = 'Email';
-      } else if (t.TaskSubtype == 'Event' || (String.isNotBlank(t.Subject) && (t.Subject.toLowerCase().contains('meeting') || t.Subject.toLowerCase().contains('event')))) {
+      } else if (
+        t.TaskSubtype == 'Event' ||
+        (String.isNotBlank(t.Subject) &&
+        (t.Subject.toLowerCase().contains('meeting') ||
+        t.Subject.toLowerCase().contains('event')))
+      ) {
         taskType = 'Meeting';
       }
       taskTypeCounts.put(taskType, taskTypeCounts.get(taskType) + 1);
-      
+
       if (t.Status == 'Completed') {
         completedTasks++;
       } else if (t.ActivityDate >= Date.today()) {
@@ -140,7 +169,9 @@ public with sharing class SellerPerformanceController {
     metrics.scheduledFollowUpsCount = scheduledFollowUps;
 
     // Calculate weekly average of completed tasks (30 days = ~4.3 weeks)
-    Decimal weeklyAvgCompleted = completedTasks > 0 ? (Decimal.valueOf(completedTasks) / 4.3) : 0;
+    Decimal weeklyAvgCompleted = completedTasks > 0
+      ? (Decimal.valueOf(completedTasks) / 4.3)
+      : 0;
 
     // Build calls tooltip
     Decimal avgCallDuration = callCount > 0
@@ -159,7 +190,9 @@ public with sharing class SellerPerformanceController {
 
     // Build tasks tooltip with task type summary and weekly average
     String taskTypeBreakdown = '';
-    for (String type : new List<String>{'Call', 'Email', 'Meeting', 'Other'}) {
+    for (
+      String type : new List<String>{ 'Call', 'Email', 'Meeting', 'Other' }
+    ) {
       Integer count = taskTypeCounts.get(type);
       if (count > 0) {
         if (String.isNotBlank(taskTypeBreakdown)) {
@@ -168,7 +201,7 @@ public with sharing class SellerPerformanceController {
         taskTypeBreakdown += type + ': <b>' + String.valueOf(count) + '</b>';
       }
     }
-    
+
     metrics.tasksTooltip =
       'Total Tasks: <b>' +
       String.valueOf(metrics.taskCount) +
@@ -225,10 +258,7 @@ public with sharing class SellerPerformanceController {
       } else {
         scheduledMeetings++;
       }
-      if (
-        e.AccountId != null &&
-        highPriorityAccountIds.contains(e.AccountId)
-      ) {
+      if (e.AccountId != null && highPriorityAccountIds.contains(e.AccountId)) {
         highPriorityAccountMeetings++;
       }
     }
@@ -305,8 +335,10 @@ public with sharing class SellerPerformanceController {
         CreatedDate,
         LastModifiedDate
       FROM Opportunity
-      WHERE OwnerId = :userId 
-        AND (CreatedDate >= :cutoffDateTime OR LastModifiedDate >= :cutoffDateTime)
+      WHERE
+        OwnerId = :userId
+        AND (CreatedDate >= :cutoffDateTime
+        OR LastModifiedDate >= :cutoffDateTime)
       ORDER BY CreatedDate DESC
     ];
     metrics.opportunitiesCount = opportunities.size();
@@ -325,7 +357,7 @@ public with sharing class SellerPerformanceController {
     Decimal smallestDeal = Decimal.valueOf(999999999);
     Map<String, Integer> stageCounts = new Map<String, Integer>();
     Set<Id> oppIds = new Set<Id>();
-    
+
     // Collect healthy and at-risk deals for tooltip
     List<Opportunity> healthyDeals = new List<Opportunity>();
     List<Opportunity> atRiskDeals = new List<Opportunity>();
@@ -345,7 +377,7 @@ public with sharing class SellerPerformanceController {
       59,
       59
     );
-    
+
     for (Opportunity opp : opportunities) {
       oppIds.add(opp.Id);
 
@@ -354,7 +386,11 @@ public with sharing class SellerPerformanceController {
       }
 
       // Only count deals closed in the last 30 days
-      if (opp.IsWon && opp.LastModifiedDate >= periodStartDateTime && opp.LastModifiedDate <= periodEndDateTime) {
+      if (
+        opp.IsWon &&
+        opp.LastModifiedDate >= periodStartDateTime &&
+        opp.LastModifiedDate <= periodEndDateTime
+      ) {
         wonCount++;
         // Calculate revenue from closed-won opportunities in last 30 days
         // Use Amount field as requested
@@ -368,7 +404,12 @@ public with sharing class SellerPerformanceController {
             smallestDeal = opp.Amount;
           }
         }
-      } else if (opp.IsClosed && !opp.IsWon && opp.LastModifiedDate >= periodStartDateTime && opp.LastModifiedDate <= periodEndDateTime) {
+      } else if (
+        opp.IsClosed &&
+        !opp.IsWon &&
+        opp.LastModifiedDate >= periodStartDateTime &&
+        opp.LastModifiedDate <= periodEndDateTime
+      ) {
         lostCount++;
       }
 
@@ -395,10 +436,7 @@ public with sharing class SellerPerformanceController {
       // Track stage counts
       if (opp.StageName != null) {
         if (stageCounts.containsKey(opp.StageName)) {
-          stageCounts.put(
-            opp.StageName,
-            stageCounts.get(opp.StageName) + 1
-          );
+          stageCounts.put(opp.StageName, stageCounts.get(opp.StageName) + 1);
         } else {
           stageCounts.put(opp.StageName, 1);
         }
@@ -418,8 +456,8 @@ public with sharing class SellerPerformanceController {
     // Calculate win rate
     Integer totalClosed = wonCount + lostCount;
     if (totalClosed > 0) {
-      metrics.winRate = (Decimal.valueOf(wonCount) /
-        Decimal.valueOf(totalClosed)) * 100;
+      metrics.winRate =
+        (Decimal.valueOf(wonCount) / Decimal.valueOf(totalClosed)) * 100;
     }
 
     // Calculate average deal size
@@ -433,7 +471,11 @@ public with sharing class SellerPerformanceController {
       if (String.isNotBlank(stageBreakdown)) {
         stageBreakdown += '<br/>';
       }
-      stageBreakdown += stage + ': <b>' + String.valueOf(stageCounts.get(stage)) + '</b>';
+      stageBreakdown +=
+        stage +
+        ': <b>' +
+        String.valueOf(stageCounts.get(stage)) +
+        '</b>';
     }
     metrics.pipelineValueTooltip =
       'Total Pipeline: <b>$' +
@@ -490,11 +532,7 @@ public with sharing class SellerPerformanceController {
     // Build at-risk deals tooltip
     Decimal atRiskValue = 0;
     for (Opportunity opp : opportunities) {
-      if (
-        !opp.IsClosed &&
-        opp.CloseDate < Date.today() &&
-        opp.Amount != null
-      ) {
+      if (!opp.IsClosed && opp.CloseDate < Date.today() && opp.Amount != null) {
         atRiskValue += opp.Amount;
       }
     }
@@ -513,32 +551,49 @@ public with sharing class SellerPerformanceController {
     String pipelineHealthMessage = '';
     if (!healthyDeals.isEmpty()) {
       Opportunity firstHealthy = healthyDeals[0];
-      String healthyName = firstHealthy.Name != null ? firstHealthy.Name : 'Unnamed Deal';
-      String healthyAmount = firstHealthy.Amount != null ? formatCurrency(firstHealthy.Amount) : '$0';
-      pipelineHealthMessage = 'Focus on your healthy deal, <b>' + healthyName + ' - $' + healthyAmount + '</b>';
+      String healthyName = firstHealthy.Name != null
+        ? firstHealthy.Name
+        : 'Unnamed Deal';
+      String healthyAmount = firstHealthy.Amount != null
+        ? formatCurrency(firstHealthy.Amount)
+        : '$0';
+      pipelineHealthMessage =
+        'Focus on your healthy deal, <b>' +
+        healthyName +
+        ' - $' +
+        healthyAmount +
+        '</b>';
     }
-    
+
     if (!atRiskDeals.isEmpty()) {
       Integer atRiskCount = Math.min(2, atRiskDeals.size());
       List<String> atRiskNames = new List<String>();
       for (Integer i = 0; i < atRiskCount; i++) {
         Opportunity atRiskOpp = atRiskDeals[i];
-        String atRiskName = atRiskOpp.Name != null ? atRiskOpp.Name : 'Unnamed Deal';
-        String atRiskAmount = atRiskOpp.Amount != null ? formatCurrency(atRiskOpp.Amount) : '$0';
+        String atRiskName = atRiskOpp.Name != null
+          ? atRiskOpp.Name
+          : 'Unnamed Deal';
+        String atRiskAmount = atRiskOpp.Amount != null
+          ? formatCurrency(atRiskOpp.Amount)
+          : '$0';
         atRiskNames.add('<b>' + atRiskName + ' - $' + atRiskAmount + '</b>');
       }
-      
+
       if (String.isNotBlank(pipelineHealthMessage)) {
-        pipelineHealthMessage += ' and make sure you are paying attention to these important at-risk deals: ' + String.join(atRiskNames, ' and ');
+        pipelineHealthMessage +=
+          ' and make sure you are paying attention to these important at-risk deals: ' +
+          String.join(atRiskNames, ' and ');
       } else {
-        pipelineHealthMessage = 'Make sure you are paying attention to these important at-risk deals: ' + String.join(atRiskNames, ' and ');
+        pipelineHealthMessage =
+          'Make sure you are paying attention to these important at-risk deals: ' +
+          String.join(atRiskNames, ' and ');
       }
     }
-    
+
     if (String.isBlank(pipelineHealthMessage)) {
       pipelineHealthMessage = 'No active deals to display.';
     }
-    
+
     metrics.pipelineHealthTooltip = pipelineHealthMessage;
 
     // Query stage history for stagnant deals and deal velocity
@@ -546,19 +601,12 @@ public with sharing class SellerPerformanceController {
     if (!oppIds.isEmpty()) {
       // Query all stage history for opportunities in our set (to detect stagnant deals)
       List<OpportunityFieldHistory> allStageHistory = [
-        SELECT
-          OpportunityId,
-          Field,
-          OldValue,
-          NewValue,
-          CreatedDate
+        SELECT OpportunityId, Field, OldValue, NewValue, CreatedDate
         FROM OpportunityFieldHistory
-        WHERE
-          OpportunityId IN :oppIds
-          AND Field = 'StageName'
+        WHERE OpportunityId IN :oppIds AND Field = 'StageName'
         ORDER BY CreatedDate DESC
       ];
-      
+
       // Filter to recent history for velocity calculation
       List<OpportunityFieldHistory> recentStageHistory = new List<OpportunityFieldHistory>();
       for (OpportunityFieldHistory hist : allStageHistory) {
@@ -595,7 +643,7 @@ public with sharing class SellerPerformanceController {
       String velocityCalculationMethod = '';
       Integer velocityDataPoints = 0;
       Integer velocityOpportunitiesUsed = 0;
-      
+
       if (!allStageHistory.isEmpty()) {
         List<Long> stageTransitionDays = new List<Long>();
         Map<Id, List<OpportunityFieldHistory>> oppHistoryMap = new Map<Id, List<OpportunityFieldHistory>>();
@@ -603,7 +651,10 @@ public with sharing class SellerPerformanceController {
         // Group all stage history by opportunity
         for (OpportunityFieldHistory hist : allStageHistory) {
           if (!oppHistoryMap.containsKey(hist.OpportunityId)) {
-            oppHistoryMap.put(hist.OpportunityId, new List<OpportunityFieldHistory>());
+            oppHistoryMap.put(
+              hist.OpportunityId,
+              new List<OpportunityFieldHistory>()
+            );
           }
           oppHistoryMap.get(hist.OpportunityId).add(hist);
         }
@@ -618,8 +669,9 @@ public with sharing class SellerPerformanceController {
             oppsWithTransitions.add(oppId);
             for (Integer i = 1; i < histList.size(); i++) {
               // Subtract older from newer to get positive days
-              Long daysDiff = histList[i].CreatedDate.getTime() - 
-                              histList[i - 1].CreatedDate.getTime();
+              Long daysDiff =
+                histList[i].CreatedDate.getTime() -
+                histList[i - 1].CreatedDate.getTime();
               daysDiff = daysDiff / (1000 * 60 * 60 * 24);
               if (daysDiff > 0 && daysDiff < 365) {
                 stageTransitionDays.add(daysDiff);
@@ -633,7 +685,8 @@ public with sharing class SellerPerformanceController {
           for (Long days : stageTransitionDays) {
             totalDays += days;
           }
-          metrics.dealVelocity = Decimal.valueOf(totalDays) /
+          metrics.dealVelocity =
+            Decimal.valueOf(totalDays) /
             Decimal.valueOf(stageTransitionDays.size());
           velocityCalculationMethod = 'Stage Transitions';
           velocityDataPoints = stageTransitionDays.size();
@@ -646,7 +699,12 @@ public with sharing class SellerPerformanceController {
       if (metrics.dealVelocity == 0) {
         List<Decimal> dealDurations = new List<Decimal>();
         for (Opportunity opp : opportunities) {
-          if (opp.IsClosed && opp.IsWon && opp.CreatedDate != null && opp.CloseDate != null) {
+          if (
+            opp.IsClosed &&
+            opp.IsWon &&
+            opp.CreatedDate != null &&
+            opp.CloseDate != null
+          ) {
             Date createdDate = opp.CreatedDate.date();
             Date closeDate = opp.CloseDate;
             Integer daysDiff = createdDate.daysBetween(closeDate);
@@ -660,7 +718,8 @@ public with sharing class SellerPerformanceController {
           for (Decimal days : dealDurations) {
             totalDays += days;
           }
-          metrics.dealVelocity = totalDays / Decimal.valueOf(dealDurations.size());
+          metrics.dealVelocity =
+            totalDays / Decimal.valueOf(dealDurations.size());
           velocityCalculationMethod = 'Closed-Won Deals';
           velocityDataPoints = dealDurations.size();
           velocityOpportunitiesUsed = dealDurations.size();
@@ -689,7 +748,8 @@ public with sharing class SellerPerformanceController {
           // For open deals, divide by number of stages (assume average 4 stages)
           // This gives us an approximate velocity
           Decimal avgStages = 4.0;
-          metrics.dealVelocity = (totalDays / Decimal.valueOf(dealDurations.size())) / avgStages;
+          metrics.dealVelocity =
+            (totalDays / Decimal.valueOf(dealDurations.size())) / avgStages;
           velocityCalculationMethod = 'Open Deals (Estimated)';
           velocityDataPoints = dealDurations.size();
           velocityOpportunitiesUsed = dealDurations.size();
@@ -698,30 +758,40 @@ public with sharing class SellerPerformanceController {
 
       // Build deal velocity tooltip with calculation details
       if (metrics.dealVelocity > 0) {
-        String tooltipText = 'Deal Velocity: <b>' + 
-          String.valueOf(metrics.dealVelocity.setScale(1)) + 
+        String tooltipText =
+          'Deal Velocity: <b>' +
+          String.valueOf(metrics.dealVelocity.setScale(1)) +
           ' days</b><br/>' +
-          'Calculation Method: <b>' + velocityCalculationMethod + '</b><br/>';
-        
+          'Calculation Method: <b>' +
+          velocityCalculationMethod +
+          '</b><br/>';
+
         if (velocityCalculationMethod == 'Stage Transitions') {
-          tooltipText += 'Based on <b>' + String.valueOf(velocityDataPoints) + 
-            ' stage transitions</b> across <b>' + 
-            String.valueOf(velocityOpportunitiesUsed) + 
+          tooltipText +=
+            'Based on <b>' +
+            String.valueOf(velocityDataPoints) +
+            ' stage transitions</b> across <b>' +
+            String.valueOf(velocityOpportunitiesUsed) +
             ' opportunities</b><br/>' +
             'Average days between each stage change in your pipeline.';
         } else if (velocityCalculationMethod == 'Closed-Won Deals') {
-          tooltipText += 'Based on <b>' + String.valueOf(velocityOpportunitiesUsed) + 
+          tooltipText +=
+            'Based on <b>' +
+            String.valueOf(velocityOpportunitiesUsed) +
             ' closed-won deals</b><br/>' +
             'Average days from creation to close date, divided by typical number of stages.';
         } else if (velocityCalculationMethod == 'Open Deals (Estimated)') {
-          tooltipText += 'Based on <b>' + String.valueOf(velocityOpportunitiesUsed) + 
+          tooltipText +=
+            'Based on <b>' +
+            String.valueOf(velocityOpportunitiesUsed) +
             ' open opportunities</b><br/>' +
             'Estimated average days per stage based on days since creation (assuming 4 stages per deal).';
         }
-        
+
         metrics.dealVelocityTooltip = tooltipText;
       } else {
-        metrics.dealVelocityTooltip = 'Deal Velocity: <b>No Data</b><br/>' +
+        metrics.dealVelocityTooltip =
+          'Deal Velocity: <b>No Data</b><br/>' +
           'Unable to calculate velocity. Need at least 2 stage transitions, closed-won deals, or open opportunities with creation dates.';
       }
 
@@ -776,8 +846,7 @@ public with sharing class SellerPerformanceController {
       }
       for (Event e : events) {
         if (
-          e.AccountId != null &&
-          highPriorityAccountIds.contains(e.AccountId)
+          e.AccountId != null && highPriorityAccountIds.contains(e.AccountId)
         ) {
           highPriorityInteractions++;
         }
@@ -986,14 +1055,18 @@ public with sharing class SellerPerformanceController {
     return 'Struggling';
   }
 
-  private static String generateHealthAssessmentTooltip(Integer score, String status, SellerPerformanceMetrics metrics) {
+  private static String generateHealthAssessmentTooltip(
+    Integer score,
+    String status,
+    SellerPerformanceMetrics metrics
+  ) {
     String tooltip = 'Your score of <b>' + String.valueOf(score) + '</b> is ';
-    
+
     // Determine target range based on status
     String targetRange = '';
     String whyText = '';
     String improvementText = '';
-    
+
     if (status == 'Crushing It') {
       targetRange = '80+';
       whyText = 'You\'re exceeding expectations with strong performance across all key areas.';
@@ -1007,42 +1080,55 @@ public with sharing class SellerPerformanceController {
       targetRange = 'below 40';
       whyText = 'Your score is significantly below target. ';
     }
-    
+
     tooltip += 'within your target of <b>' + targetRange + '</b>.<br/><br/>';
     tooltip += '<b>Why this score?</b><br/>';
     tooltip += whyText;
-    
+
     // Add specific data points
-    Integer totalActivities = (metrics.callCount != null ? metrics.callCount : 0) + 
-                              (metrics.emailCount != null ? metrics.emailCount : 0) + 
-                              (metrics.meetingCount != null ? metrics.meetingCount : 0) + 
-                              (metrics.taskCount != null ? metrics.taskCount : 0);
-    
+    Integer totalActivities =
+      (metrics.callCount != null ? metrics.callCount : 0) +
+      (metrics.emailCount != null ? metrics.emailCount : 0) +
+      (metrics.meetingCount != null ? metrics.meetingCount : 0) +
+      (metrics.taskCount != null ? metrics.taskCount : 0);
+
     if (totalActivities > 0) {
-      tooltip += 'You\'ve completed <b>' + String.valueOf(totalActivities) + ' activities</b> in the last 30 days';
+      tooltip +=
+        'You\'ve completed <b>' +
+        String.valueOf(totalActivities) +
+        ' activities</b> in the last 30 days';
       if (metrics.winRate != null && metrics.winRate > 0) {
-        tooltip += ' with a <b>' + String.valueOf(metrics.winRate.setScale(1)) + '% win rate</b>';
+        tooltip +=
+          ' with a <b>' +
+          String.valueOf(metrics.winRate.setScale(1)) +
+          '% win rate</b>';
       }
       tooltip += '. ';
     }
-    
+
     if (metrics.totalPipelineValue != null && metrics.totalPipelineValue > 0) {
       String pipelineFormatted = formatCurrency(metrics.totalPipelineValue);
       tooltip += 'Your pipeline value is <b>$' + pipelineFormatted + '</b>. ';
     }
-    
+
     if (metrics.atRiskDealsCount != null && metrics.atRiskDealsCount > 0) {
-      tooltip += 'You have <b>' + String.valueOf(metrics.atRiskDealsCount) + ' at-risk deals</b> that need attention. ';
+      tooltip +=
+        'You have <b>' +
+        String.valueOf(metrics.atRiskDealsCount) +
+        ' at-risk deals</b> that need attention. ';
     }
-    
+
     tooltip += '<br/><br/><b>How to improve:</b><br/>';
-    
+
     // Provide improvement suggestions based on score
     if (score < 60) {
       if (totalActivities < 50) {
         tooltip += '• Increase activity volume - aim for at least 50 activities per month<br/>';
       }
-      if (metrics.totalPipelineValue == null || metrics.totalPipelineValue < 100000) {
+      if (
+        metrics.totalPipelineValue == null ||
+        metrics.totalPipelineValue < 100000
+      ) {
         tooltip += '• Build your pipeline - focus on creating new opportunities worth at least $100K<br/>';
       }
       if (metrics.atRiskDealsCount != null && metrics.atRiskDealsCount > 0) {
@@ -1053,7 +1139,10 @@ public with sharing class SellerPerformanceController {
       }
     } else if (score < 80) {
       tooltip += '• Maintain your current activity levels<br/>';
-      if (metrics.totalPipelineValue != null && metrics.totalPipelineValue < 500000) {
+      if (
+        metrics.totalPipelineValue != null &&
+        metrics.totalPipelineValue < 500000
+      ) {
         tooltip += '• Grow pipeline value - aim for $500K+ to reach the next level<br/>';
       }
       if (metrics.dealVelocity != null && metrics.dealVelocity > 14) {
@@ -1065,13 +1154,16 @@ public with sharing class SellerPerformanceController {
       tooltip += '• Share best practices with your team<br/>';
       tooltip += '• Continue building relationships and expanding your pipeline<br/>';
     }
-    
+
     return tooltip;
   }
 
-  private static String generateTrendTooltip(String trend, SellerPerformanceMetrics metrics) {
+  private static String generateTrendTooltip(
+    String trend,
+    SellerPerformanceMetrics metrics
+  ) {
     String tooltip = '';
-    
+
     // Determine trend direction
     String trendDirection = '';
     if (String.isNotBlank(trend)) {
@@ -1086,78 +1178,130 @@ public with sharing class SellerPerformanceController {
     } else {
       trendDirection = 'Steady';
     }
-    
+
     tooltip += 'Your 30-day trend is <b>' + trendDirection + '</b>.<br/><br/>';
     tooltip += '<b>Why this trend?</b><br/>';
-    
+
     // Calculate total activities
-    Integer totalActivities = (metrics.callCount != null ? metrics.callCount : 0) + 
-                              (metrics.emailCount != null ? metrics.emailCount : 0) + 
-                              (metrics.meetingCount != null ? metrics.meetingCount : 0) + 
-                              (metrics.taskCount != null ? metrics.taskCount : 0);
-    
+    Integer totalActivities =
+      (metrics.callCount != null ? metrics.callCount : 0) +
+      (metrics.emailCount != null ? metrics.emailCount : 0) +
+      (metrics.meetingCount != null ? metrics.meetingCount : 0) +
+      (metrics.taskCount != null ? metrics.taskCount : 0);
+
     // Analyze activity patterns
     if (totalActivities >= 75) {
-      tooltip += 'You\'ve been highly active with <b>' + String.valueOf(totalActivities) + ' activities</b> in the last 30 days. ';
+      tooltip +=
+        'You\'ve been highly active with <b>' +
+        String.valueOf(totalActivities) +
+        ' activities</b> in the last 30 days. ';
     } else if (totalActivities >= 50) {
-      tooltip += 'You\'ve maintained good activity levels with <b>' + String.valueOf(totalActivities) + ' activities</b>. ';
+      tooltip +=
+        'You\'ve maintained good activity levels with <b>' +
+        String.valueOf(totalActivities) +
+        ' activities</b>. ';
     } else if (totalActivities >= 25) {
-      tooltip += 'Your activity level is moderate with <b>' + String.valueOf(totalActivities) + ' activities</b>. ';
+      tooltip +=
+        'Your activity level is moderate with <b>' +
+        String.valueOf(totalActivities) +
+        ' activities</b>. ';
     } else if (totalActivities > 0) {
-      tooltip += 'Your activity level is lower with <b>' + String.valueOf(totalActivities) + ' activities</b>. ';
+      tooltip +=
+        'Your activity level is lower with <b>' +
+        String.valueOf(totalActivities) +
+        ' activities</b>. ';
     } else {
       tooltip += 'You have <b>no recorded activities</b> in the last 30 days. ';
     }
-    
+
     // Analyze pipeline momentum
-    if (metrics.newOpportunitiesCount != null && metrics.newOpportunitiesCount > 0) {
-      tooltip += 'You\'ve created <b>' + String.valueOf(metrics.newOpportunitiesCount) + ' new opportunities</b>. ';
+    if (
+      metrics.newOpportunitiesCount != null &&
+      metrics.newOpportunitiesCount > 0
+    ) {
+      tooltip +=
+        'You\'ve created <b>' +
+        String.valueOf(metrics.newOpportunitiesCount) +
+        ' new opportunities</b>. ';
     }
-    
-    if (metrics.dealsAdvancingCount != null && metrics.dealsAdvancingCount > 0) {
-      tooltip += '<b>' + String.valueOf(metrics.dealsAdvancingCount) + ' deals</b> have advanced stages. ';
+
+    if (
+      metrics.dealsAdvancingCount != null &&
+      metrics.dealsAdvancingCount > 0
+    ) {
+      tooltip +=
+        '<b>' +
+        String.valueOf(metrics.dealsAdvancingCount) +
+        ' deals</b> have advanced stages. ';
     }
-    
+
     // Analyze deal execution
     if (metrics.dealsClosedWon != null && metrics.dealsClosedWon > 0) {
-      tooltip += 'You\'ve closed <b>' + String.valueOf(metrics.dealsClosedWon) + ' deals</b> as won';
+      tooltip +=
+        'You\'ve closed <b>' +
+        String.valueOf(metrics.dealsClosedWon) +
+        ' deals</b> as won';
       if (metrics.winRate != null && metrics.winRate > 0) {
-        tooltip += ' with a <b>' + String.valueOf(metrics.winRate.setScale(1)) + '% win rate</b>';
+        tooltip +=
+          ' with a <b>' +
+          String.valueOf(metrics.winRate.setScale(1)) +
+          '% win rate</b>';
       }
       tooltip += '. ';
     }
-    
+
     // Analyze pipeline health
     if (metrics.stagnantDealsCount != null && metrics.stagnantDealsCount > 0) {
-      tooltip += 'You have <b>' + String.valueOf(metrics.stagnantDealsCount) + ' stagnant deals</b> that haven\'t progressed in 30+ days. ';
+      tooltip +=
+        'You have <b>' +
+        String.valueOf(metrics.stagnantDealsCount) +
+        ' stagnant deals</b> that haven\'t progressed in 30+ days. ';
     }
-    
+
     if (metrics.atRiskDealsCount != null && metrics.atRiskDealsCount > 0) {
-      tooltip += '<b>' + String.valueOf(metrics.atRiskDealsCount) + ' deals</b> are at-risk with close dates approaching. ';
+      tooltip +=
+        '<b>' +
+        String.valueOf(metrics.atRiskDealsCount) +
+        ' deals</b> are at-risk with close dates approaching. ';
     }
-    
+
     // Analyze deal velocity
     if (metrics.dealVelocity != null && metrics.dealVelocity > 0) {
       if (metrics.dealVelocity <= 7) {
-        tooltip += 'Your deal velocity is <b>fast</b> at ' + String.valueOf(metrics.dealVelocity.setScale(1)) + ' days per stage. ';
+        tooltip +=
+          'Your deal velocity is <b>fast</b> at ' +
+          String.valueOf(metrics.dealVelocity.setScale(1)) +
+          ' days per stage. ';
       } else if (metrics.dealVelocity <= 14) {
-        tooltip += 'Your deal velocity is <b>good</b> at ' + String.valueOf(metrics.dealVelocity.setScale(1)) + ' days per stage. ';
+        tooltip +=
+          'Your deal velocity is <b>good</b> at ' +
+          String.valueOf(metrics.dealVelocity.setScale(1)) +
+          ' days per stage. ';
       } else if (metrics.dealVelocity <= 21) {
-        tooltip += 'Your deal velocity is <b>moderate</b> at ' + String.valueOf(metrics.dealVelocity.setScale(1)) + ' days per stage. ';
+        tooltip +=
+          'Your deal velocity is <b>moderate</b> at ' +
+          String.valueOf(metrics.dealVelocity.setScale(1)) +
+          ' days per stage. ';
       } else {
-        tooltip += 'Your deal velocity is <b>slower</b> at ' + String.valueOf(metrics.dealVelocity.setScale(1)) + ' days per stage. ';
+        tooltip +=
+          'Your deal velocity is <b>slower</b> at ' +
+          String.valueOf(metrics.dealVelocity.setScale(1)) +
+          ' days per stage. ';
       }
     }
-    
+
     tooltip += '<br/><br/><b>What this means:</b><br/>';
-    
+
     // Provide trend-specific insights
     if (trendDirection == 'Accelerating') {
       tooltip += '• Your performance is improving - keep up the momentum!<br/>';
       if (totalActivities >= 75) {
         tooltip += '• High activity levels are driving your success<br/>';
       }
-      if (metrics.dealsAdvancingCount != null && metrics.dealsAdvancingCount > 0) {
+      if (
+        metrics.dealsAdvancingCount != null &&
+        metrics.dealsAdvancingCount > 0
+      ) {
         tooltip += '• Deals moving through stages indicate strong pipeline momentum<br/>';
       }
       if (metrics.dealVelocity != null && metrics.dealVelocity <= 14) {
@@ -1168,7 +1312,10 @@ public with sharing class SellerPerformanceController {
       if (totalActivities < 50) {
         tooltip += '• Low activity levels may be impacting your results<br/>';
       }
-      if (metrics.stagnantDealsCount != null && metrics.stagnantDealsCount > 0) {
+      if (
+        metrics.stagnantDealsCount != null &&
+        metrics.stagnantDealsCount > 0
+      ) {
         tooltip += '• Stagnant deals need immediate attention to restart momentum<br/>';
       }
       if (metrics.atRiskDealsCount != null && metrics.atRiskDealsCount > 0) {
@@ -1177,11 +1324,14 @@ public with sharing class SellerPerformanceController {
     } else {
       tooltip += '• Your performance is holding steady<br/>';
       tooltip += '• Maintain current activity levels to sustain results<br/>';
-      if (metrics.newOpportunitiesCount != null && metrics.newOpportunitiesCount == 0) {
+      if (
+        metrics.newOpportunitiesCount != null &&
+        metrics.newOpportunitiesCount == 0
+      ) {
         tooltip += '• Consider adding new opportunities to accelerate growth<br/>';
       }
     }
-    
+
     return tooltip;
   }
 
@@ -1223,7 +1373,9 @@ public with sharing class SellerPerformanceController {
     );
 
     contextParts.add('### Activity Metrics (Last 30 Days)\n');
-    contextParts.add('- **Calls:** ' + String.valueOf(metrics.callCount) + '\n');
+    contextParts.add(
+      '- **Calls:** ' + String.valueOf(metrics.callCount) + '\n'
+    );
     contextParts.add(
       '- **Emails:** ' + String.valueOf(metrics.emailCount) + '\n'
     );
@@ -1278,24 +1430,16 @@ public with sharing class SellerPerformanceController {
 
     contextParts.add('### Deal Execution\n');
     contextParts.add(
-      '- **Win Rate:** ' +
-        String.valueOf(metrics.winRate.setScale(1)) +
-        '%\n'
+      '- **Win Rate:** ' + String.valueOf(metrics.winRate.setScale(1)) + '%\n'
     );
     contextParts.add(
-      '- **Total Revenue:** $' +
-        formatCurrency(metrics.totalRevenue) +
-        '\n'
+      '- **Total Revenue:** $' + formatCurrency(metrics.totalRevenue) + '\n'
     );
     contextParts.add(
-      '- **Avg Deal Size:** $' +
-        formatCurrency(metrics.avgDealSize) +
-        '\n'
+      '- **Avg Deal Size:** $' + formatCurrency(metrics.avgDealSize) + '\n'
     );
     contextParts.add(
-      '- **Deals Closed Won:** ' +
-        String.valueOf(metrics.dealsClosedWon) +
-        '\n'
+      '- **Deals Closed Won:** ' + String.valueOf(metrics.dealsClosedWon) + '\n'
     );
     contextParts.add(
       '- **Deals Closed Lost:** ' +
@@ -1322,9 +1466,7 @@ public with sharing class SellerPerformanceController {
 
     contextParts.add('### Pipeline Health\n');
     contextParts.add(
-      '- **At-Risk Deals:** ' +
-        String.valueOf(metrics.atRiskDealsCount) +
-        '\n'
+      '- **At-Risk Deals:** ' + String.valueOf(metrics.atRiskDealsCount) + '\n'
     );
     contextParts.add(
       '- **Past-Due Close Dates:** ' +
@@ -1369,7 +1511,9 @@ public with sharing class SellerPerformanceController {
           performanceStatus +
           '), and all metrics provided, generate:\n'
       );
-      promptParts.add('1. A trend analysis (Accelerating, Steady, or Declining)\n');
+      promptParts.add(
+        '1. A trend analysis (Accelerating, Steady, or Declining)\n'
+      );
       promptParts.add('2. 5 key insights about the seller performance\n');
       promptParts.add('3. 5 specific, actionable recommendations\n\n');
 
@@ -1472,9 +1616,7 @@ public with sharing class SellerPerformanceController {
       } else {
         return 'No response received from Einstein AI. Please verify Einstein Generative AI is enabled in your org.';
       }
-    } catch (
-      aiplatform.ModelsAPI.createGenerations_ResponseException e
-    ) {
+    } catch (aiplatform.ModelsAPI.createGenerations_ResponseException e) {
       System.debug(
         LoggingLevel.ERROR,
         'Models API Response Exception: ' + e.getMessage()
@@ -1570,4 +1712,3 @@ public with sharing class SellerPerformanceController {
     }
   }
 }
-

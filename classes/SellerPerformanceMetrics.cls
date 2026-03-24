@@ -164,4 +164,3 @@ public with sharing class SellerPerformanceMetrics {
     this.trendTooltip = '';
   }
 }
-
