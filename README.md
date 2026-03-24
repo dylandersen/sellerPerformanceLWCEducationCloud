@@ -7,7 +7,7 @@ A Salesforce Lightning Web Component that computes a weighted seller performance
 
 ## Screenshot
 
-> ![Seller Performance Dashboard](sellerPerformance.png)
+> ![Seller Performance Dashboard](sellerPerformanceDashboardScreenshot.png)
 
 ## Overview
 
