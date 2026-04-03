@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>SellerPerformanceAnalysis</members>
+        <members>SellerPerformanceController</members>
+        <members>SellerPerformanceMetrics</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>sellerPerformance</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    <types>
+        <members>AgentforceRGBIcon</members>
+        <members>ceaCapaLogo</members>
+        <name>StaticResource</name>
+    </types>
+    <types>
+        <members>Seller_Performance</members>
+        <name>FlexiPage</name>
+    </types>
+    <types>
+        <members>Seller_Performance</members>
+        <name>CustomTab</name>
+    </types>
+    <version>63.0</version>
+</Package>

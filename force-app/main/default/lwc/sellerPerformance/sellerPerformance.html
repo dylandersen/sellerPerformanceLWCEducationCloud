@@ -1,0 +1,643 @@
+<template>
+  <lightning-card>
+    <div slot="title">
+      <div class="custom-header">
+        <div class="icon-container">
+          <lightning-icon
+            icon-name="utility:user"
+            size="small"
+            class="header-icon"
+          ></lightning-icon>
+        </div>
+        <div class="title-container">
+          <h2 class="card-title">CEA CAPA Seller Performance</h2>
+          <div class="powered-by">Powered by <b>Agentforce ✨</b></div>
+        </div>
+      </div>
+    </div>
+    <div slot="actions">
+      <lightning-button
+        label="✨"
+        title="AI-Powered Refresh"
+        onclick={handleRefresh}
+        disabled={isLoading}
+        variant="neutral"
+        class="refresh-button"
+      ></lightning-button>
+    </div>
+
+    <div class="slds-p-around_medium">
+      <!-- Loading State -->
+      <template lwc:if={isLoading}>
+        <div class="loading-container">
+          <img src={agentforceIcon} alt="Agentforce" class="agentforce-icon" />
+          <div class="spinner"></div>
+          <p class="loading-text">{currentLoadingMessage}</p>
+        </div>
+      </template>
+
+      <!-- Empty State -->
+      <template lwc:if={showEmptyState}>
+        <div class="slds-text-align_center slds-p-around_large">
+          <p class="slds-text-heading_small empty-state-text">
+            Click the ✨ button to let Agentforce analyze your study abroad
+            performance
+          </p>
+        </div>
+      </template>
+
+      <!-- Error State -->
+      <template lwc:if={hasError}>
+        <div class="slds-box slds-theme_error slds-m-bottom_medium">
+          <p class="slds-text-color_error">{errorMessage}</p>
+        </div>
+      </template>
+
+      <!-- Main Dashboard -->
+      <template lwc:if={hasData}>
+        <div class="health-overview-container slds-m-bottom_large">
+          <!-- Left: Score Gauge -->
+          <div class="health-gauge-section">
+            <div class="gauge-wrapper">
+              <div class="circular-progress-container">
+                <svg
+                  class="circular-progress"
+                  width="160"
+                  height="160"
+                  viewBox="0 0 160 160"
+                >
+                  <circle
+                    cx="80" cy="80" r="70" fill="none"
+                    stroke="#e5e5e5" stroke-width="8"
+                  ></circle>
+                  <circle
+                    cx="80" cy="80" r="70" fill="none"
+                    stroke={scoreColor} stroke-width="8"
+                    stroke-linecap="round"
+                    stroke-dasharray={progressDashArray}
+                    stroke-dashoffset={progressDashOffset}
+                    transform="rotate(-90 80 80)"
+                    class="progress-ring"
+                  ></circle>
+                </svg>
+                <div class="gauge-content">
+                  <div class="score-large">{performanceData.score}</div>
+                  <div class="score-denominator">/100</div>
+                </div>
+              </div>
+              <div class="gauge-label">
+                <div>PERFORMANCE</div>
+                <div>SCORE</div>
+              </div>
+              <div class="score-tooltip">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>How is this score calculated?</span>
+                </div>
+                <div class="tooltip-content">
+                  Agentforce analyzes enrollment pacing (30%), program pipeline
+                  (25%), partnership development (25%), and institutional
+                  engagement (20%) across your study abroad portfolio.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: 2x2 Grid -->
+          <div class="health-details-section">
+            <!-- Health Assessment -->
+            <div class="health-assessment-wrapper">
+              <div class="status-card">
+                <div class="status-header">
+                  <span>Health Assessment</span>
+                  <button class="info-button" onclick={toggleHealthAssessment} title="Click for details">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="info-icon"></lightning-icon>
+                  </button>
+                </div>
+                <div class={performanceStatusClass} data-class="health-status-modern">
+                  <span class="status-emoji-large">{performanceEmoji}</span>
+                  <div class="status-content">
+                    <span class="status-text-large">{performanceData.performanceStatus}</span>
+                    <span class="status-explanation">{statusExplanation}</span>
+                  </div>
+                </div>
+                <template lwc:if={showHealthAssessmentDetails}>
+                  <div class={healthAssessmentDetailsClass}>
+                    <div class="details-header">
+                      <lightning-icon icon-name="utility:info_alt" size="xx-small" class="details-icon"></lightning-icon>
+                      <span>Health Assessment Details</span>
+                    </div>
+                    <div class="details-content">
+                      <lightning-formatted-rich-text value={healthAssessmentTooltip}></lightning-formatted-rich-text>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- 30-Day Trend -->
+            <div class="trend-wrapper" data-trend={trendClass}>
+              <div class="trend-card">
+                <div class="trend-header">
+                  <span>30-Day Trend</span>
+                  <button class="info-button" onclick={toggleTrend} title="Click for details">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="info-icon"></lightning-icon>
+                  </button>
+                </div>
+                <div class={trendClass} data-class="health-trend-modern">
+                  <lightning-icon icon-name={trendIcon} size="small" class="trend-icon"></lightning-icon>
+                  <div class="trend-content">
+                    <span class="trend-text">
+                      <lightning-formatted-rich-text value={trendLabel}></lightning-formatted-rich-text>
+                    </span>
+                    <span class="trend-explanation">{trendExplanation}</span>
+                  </div>
+                </div>
+                <template lwc:if={showTrendDetails}>
+                  <div class={trendDetailsClass}>
+                    <div class="details-header">
+                      <lightning-icon icon-name="utility:info_alt" size="xx-small" class="details-icon"></lightning-icon>
+                      <span>30-Day Trend Details</span>
+                    </div>
+                    <div class="details-content">
+                      <lightning-formatted-rich-text value={trendTooltip}></lightning-formatted-rich-text>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Program Pipeline Health -->
+            <div class="pipeline-health-wrapper">
+              <div class="stage-card pipeline-health-card">
+                <div class="stage-header">Program Pipeline</div>
+                <div class="pipeline-health-content">
+                  <div class="pipeline-stats">
+                    <span class="pipeline-healthy">{pipelineActiveCount} active</span>
+                    <span class="pipeline-divider">•</span>
+                    <span class="pipeline-atrisk" style={stagnantTextStyle}>{pipelineStagnantCount} stagnant</span>
+                  </div>
+                  <div class="pipeline-bar-container">
+                    <div class="pipeline-bar-healthy" style={pipelineActiveBarStyle}></div>
+                    <div class="pipeline-bar-atrisk" style={pipelineStagnantBarStyle}></div>
+                  </div>
+                  <div class="pipeline-explanation">{pipelineExplanation}</div>
+                </div>
+              </div>
+              <template lwc:if={pipelineStageTooltip}>
+                <div class="metric-tooltip pipeline-health-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Pipeline Stage Breakdown</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={pipelineStageTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Enrollment Pacing -->
+            <div class="velocity-wrapper">
+              <div class="closedate-card velocity-card">
+                <div class="closedate-header">Enrollment Pacing</div>
+                <div class="velocity-content">
+                  <div class="velocity-main">
+                    <span class="velocity-value">{enrollmentPacingFormatted}</span>
+                    <span class={enrollmentPacingBadgeClass}>{enrollmentPacingStatus}</span>
+                  </div>
+                  <div class="velocity-explanation">
+                    {activeEnrollment} of {forecastedStudents} forecasted students
+                  </div>
+                </div>
+              </div>
+              <template lwc:if={enrollmentPacingTooltip}>
+                <div class="metric-tooltip deal-velocity-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Enrollment Pacing Details</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={enrollmentPacingTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Metrics Grid -->
+        <div class="slds-m-bottom_medium">
+          <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+            📊 Performance Metrics
+          </h3>
+          <div class="metrics-grid">
+            <!-- 1. Forecasted Students -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:people" size="small"></lightning-icon>
+                <div class="metric-value">{forecastedStudents}</div>
+                <div class="metric-label">Forecasted Students</div>
+              </div>
+              <template lwc:if={forecastedStudentsTooltip}>
+                <div class="metric-tooltip forecasted-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Enrollment Details</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={forecastedStudentsTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 2. Active Enrollment -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:individual" size="small"></lightning-icon>
+                <div class="metric-value">{activeEnrollment}</div>
+                <div class="metric-label">Active Enrollment</div>
+              </div>
+              <template lwc:if={activeEnrollmentTooltip}>
+                <div class="metric-tooltip enrollment-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Active Enrollment Details</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={activeEnrollmentTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 3. Open Programs -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:opportunity" size="small"></lightning-icon>
+                <div class="metric-value">{openPrograms}</div>
+                <div class="metric-label">Open Programs</div>
+              </div>
+              <template lwc:if={openProgramsTooltip}>
+                <div class="metric-tooltip programs-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Program Pipeline</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={openProgramsTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 4. Programs Won -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:thanks" size="small"></lightning-icon>
+                <div class="metric-value">{programsWon}</div>
+                <div class="metric-label">Programs Won</div>
+              </div>
+              <template lwc:if={programsWonTooltip}>
+                <div class="metric-tooltip won-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Win / Loss Details</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={programsWonTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 5. Proposals Sent -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:contract" size="small"></lightning-icon>
+                <div class="metric-value">{proposalsSent}</div>
+                <div class="metric-label">Proposals Sent (90d)</div>
+              </div>
+              <template lwc:if={proposalsSentTooltip}>
+                <div class="metric-tooltip proposals-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Partnership Activity</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={proposalsSentTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 6. Projected Revenue -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:currency" size="small"></lightning-icon>
+                <div class="metric-value">{projectedRevenueFormatted}</div>
+                <div class="metric-label">Projected Revenue</div>
+              </div>
+              <template lwc:if={projectedRevenueTooltip}>
+                <div class="metric-tooltip revenue-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Revenue Details</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={projectedRevenueTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 7. Success Plans -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:goals" size="small"></lightning-icon>
+                <div class="metric-value">{successPlansActive}</div>
+                <div class="metric-label">Success Plans</div>
+              </div>
+              <template lwc:if={successPlansTooltip}>
+                <div class="metric-tooltip success-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Engagement Details</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={successPlansTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- 8. Home Institutions -->
+            <div class="metric-card-wrapper">
+              <div class="metric-card">
+                <lightning-icon icon-name="standard:account" size="small"></lightning-icon>
+                <div class="metric-value">{homeInstitutionsManaged}</div>
+                <div class="metric-label">Home Institutions</div>
+              </div>
+              <template lwc:if={institutionsTooltip}>
+                <div class="metric-tooltip institutions-tooltip">
+                  <div class="tooltip-header">
+                    <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-icon"></lightning-icon>
+                    <span>Institution Portfolio</span>
+                  </div>
+                  <div class="tooltip-content">
+                    <lightning-formatted-rich-text value={institutionsTooltip}></lightning-formatted-rich-text>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sales Activity (Revenue.io + Tasks + Events) -->
+        <div class="slds-m-bottom_medium">
+          <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+            📞 Sales Activity <span class="section-subtitle">(last 30 days)</span>
+          </h3>
+          <div class="activity-grid">
+            <!-- Outbound Calls -->
+            <div class="activity-card-wrapper">
+              <div class="activity-card">
+                <span class="act-icon-circle act-blue">
+                  <lightning-icon icon-name="utility:call" size="xx-small" class="act-icon"></lightning-icon>
+                </span>
+                <div class="act-value">{callsMade}</div>
+                <div class="act-label">Calls Made</div>
+              </div>
+              <div class="metric-tooltip act-tooltip-blue">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:call" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>Calls Made</span>
+                </div>
+                <div class="tooltip-content">
+                  <lightning-formatted-rich-text value={callsMadeTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calls Connected -->
+            <div class="activity-card-wrapper">
+              <div class="activity-card">
+                <span class="act-icon-circle act-teal">
+                  <lightning-icon icon-name="utility:voicemail_drop" size="xx-small" class="act-icon"></lightning-icon>
+                </span>
+                <div class="act-value">{callsConnected}</div>
+                <div class="act-label">Connected</div>
+              </div>
+              <div class="metric-tooltip act-tooltip-teal">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:voicemail_drop" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>Connected Calls</span>
+                </div>
+                <div class="tooltip-content">
+                  <lightning-formatted-rich-text value={callsConnectedTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Talk Time -->
+            <div class="activity-card-wrapper">
+              <div class="activity-card">
+                <span class="act-icon-circle act-purple">
+                  <lightning-icon icon-name="utility:clock" size="xx-small" class="act-icon"></lightning-icon>
+                </span>
+                <div class="act-value">{totalTalkTimeFormatted}</div>
+                <div class="act-label">Talk Time</div>
+              </div>
+              <div class="metric-tooltip act-tooltip-purple">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:clock" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>Talk Time</span>
+                </div>
+                <div class="tooltip-content">
+                  <lightning-formatted-rich-text value={talkTimeTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Emails -->
+            <div class="activity-card-wrapper">
+              <div class="activity-card">
+                <span class="act-icon-circle act-orange">
+                  <lightning-icon icon-name="utility:email" size="xx-small" class="act-icon"></lightning-icon>
+                </span>
+                <div class="act-value">{emailsSent}</div>
+                <div class="act-label">Emails Sent</div>
+              </div>
+              <div class="metric-tooltip act-tooltip-orange">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:email" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>Emails Sent</span>
+                </div>
+                <div class="tooltip-content">
+                  <lightning-formatted-rich-text value={emailsSentTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Meetings -->
+            <div class="activity-card-wrapper">
+              <div class="activity-card">
+                <span class="act-icon-circle act-green">
+                  <lightning-icon icon-name="utility:event" size="xx-small" class="act-icon"></lightning-icon>
+                </span>
+                <div class="act-value">{meetingsHeld}</div>
+                <div class="act-label">Meetings</div>
+              </div>
+              <div class="metric-tooltip act-tooltip-green">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:event" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>Meetings Held</span>
+                </div>
+                <div class="tooltip-content">
+                  <lightning-formatted-rich-text value={meetingsTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tasks Completed -->
+            <div class="activity-card-wrapper">
+              <div class="activity-card">
+                <span class="act-icon-circle act-navy">
+                  <lightning-icon icon-name="utility:check" size="xx-small" class="act-icon"></lightning-icon>
+                </span>
+                <div class="act-value">{tasksCompleted}</div>
+                <div class="act-label">Tasks Done</div>
+              </div>
+              <div class="metric-tooltip act-tooltip-navy">
+                <div class="tooltip-header">
+                  <lightning-icon icon-name="utility:check" size="xx-small" class="tooltip-icon"></lightning-icon>
+                  <span>Tasks Completed</span>
+                </div>
+                <div class="tooltip-content">
+                  <lightning-formatted-rich-text value={tasksDoneTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Stage Movement -->
+        <div class="slds-m-bottom_medium">
+          <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+            🔄 Pipeline Stage Movement <span class="section-subtitle">(Custom &amp; Cohort programs)</span>
+          </h3>
+          <div class="stage-movement-container">
+            <!-- Funnel stages -->
+            <div class="stage-funnel">
+              <div class="funnel-stage" style={funnelNewStyle}>
+                <div class="funnel-label">New</div>
+                <div class="funnel-count">{stageNewCount}</div>
+              </div>
+              <div class="funnel-arrow">›</div>
+              <div class="funnel-stage" style={funnelInDevStyle}>
+                <div class="funnel-label">In Dev</div>
+                <div class="funnel-count">{stageInDevCount}</div>
+              </div>
+              <div class="funnel-arrow">›</div>
+              <div class="funnel-stage" style={funnelProposalStyle}>
+                <div class="funnel-label">Proposal</div>
+                <div class="funnel-count">{stageProposalCount}</div>
+              </div>
+              <div class="funnel-arrow">›</div>
+              <div class="funnel-stage" style={funnelQualifiedStyle}>
+                <div class="funnel-label">Qualified</div>
+                <div class="funnel-count">{stageQualifiedCount}</div>
+              </div>
+              <div class="funnel-arrow">›</div>
+              <div class="funnel-stage" style={funnelAgreementStyle}>
+                <div class="funnel-label">Agreement</div>
+                <div class="funnel-count">{stageAgreementCount}</div>
+              </div>
+              <div class="funnel-arrow">›</div>
+              <div class="funnel-stage" style={funnelRosterStyle}>
+                <div class="funnel-label">Roster</div>
+                <div class="funnel-count">{stageRosterCount}</div>
+              </div>
+            </div>
+
+            <!-- Advancing badge -->
+            <div class="advancing-badge-row">
+              <div class="advancing-badge">
+                <lightning-icon icon-name="utility:trending" size="xx-small" class="advancing-icon"></lightning-icon>
+                <span><b>{dealsAdvancingCount}</b> deal{dealsAdvancingPlural} moved stages in the last 30 days</span>
+              </div>
+              <template lwc:if={stageMovementTooltip}>
+                <button class="info-button stage-info-btn" onclick={toggleStageMovement} title="Stage movement details">
+                  <lightning-icon icon-name="utility:info_alt" size="xx-small" class="info-icon"></lightning-icon>
+                </button>
+              </template>
+            </div>
+
+            <template lwc:if={showStageMovementDetails}>
+              <div class="expandable-details stage-movement-details">
+                <div class="details-header">
+                  <lightning-icon icon-name="utility:info_alt" size="xx-small" class="details-icon"></lightning-icon>
+                  <span>Stage Movement Details</span>
+                </div>
+                <div class="details-content">
+                  <lightning-formatted-rich-text value={stageMovementTooltip}></lightning-formatted-rich-text>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Key Insights and Recommended Actions -->
+        <template lwc:if={hasInsightsOrActions}>
+          <div class="insights-actions-container slds-m-bottom_medium">
+            <template lwc:if={hasKeyInsights}>
+              <div class="insights-column">
+                <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+                  💡 Key Insights
+                </h3>
+                <ul class="slds-list_dotted">
+                  <template for:each={performanceData.keyInsights} for:item="insight">
+                    <li key={insight} class="insight-item">
+                      <lightning-formatted-rich-text value={insight}></lightning-formatted-rich-text>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+            <template lwc:if={hasRecommendedActions}>
+              <div class="actions-column">
+                <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+                  🎯 Recommended Actions
+                </h3>
+                <ul class="slds-list_dotted">
+                  <template for:each={performanceData.recommendedActions} for:item="action">
+                    <li key={action} class="action-item">
+                      <lightning-formatted-rich-text value={action}></lightning-formatted-rich-text>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- AI Disclaimer -->
+        <div class="slds-m-top_medium">
+          <div class="slds-scoped-notification slds-media slds-media_center ai-disclaimer" role="status">
+            <div class="slds-media__figure">
+              <lightning-icon icon-name="utility:info" size="x-small" class="disclaimer-icon"></lightning-icon>
+            </div>
+            <div class="slds-media__body">
+              <p class="disclaimer-text">
+                Agentforce uses generative AI, which can include inaccurate or
+                harmful responses. Before sharing externally, review the output
+                for accuracy and safety.
+              </p>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </lightning-card>
+</template>
